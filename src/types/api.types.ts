@@ -9,7 +9,7 @@ export interface SubmissionFormData {
   description_long: string
   category_id: number
   tags: string[]
-  tech: 'html_css' | 'tailwind' | 'react_jsx'
+  tech: 'html_css' | 'tailwind' | 'react_jsx' | 'vue'
   code: string
   agreedToTerms: boolean
 }

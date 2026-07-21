@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import { generateSlug } from '@/lib/slug'
+import { sanitizeForStorage } from '@/lib/sanitize'
+import { buildHtmlCssPreview, buildTailwindPreview, buildReactPreview } from '@/lib/preview-builder'
 import type { ComponentWithMeta } from '@/types/component.types'
+import type { SubmissionFormData } from '@/types/api.types'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -58,4 +63,108 @@ export async function GET(request: NextRequest) {
     error: null,
     totalCount: count ?? 0,
   })
+}
+
+const TECH_LIST = ['html_css', 'tailwind', 'react_jsx', 'vue'] as const
+
+function buildPreviewHtml(code: string, tech: string): string {
+  switch (tech) {
+    case 'tailwind':
+      return buildTailwindPreview(code)
+    case 'react_jsx':
+      return buildReactPreview(code)
+    default:
+      return buildHtmlCssPreview(code)
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const supabase = await createServerSupabaseClient()
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (!user || authError) {
+    return NextResponse.json({ data: null, error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const body: SubmissionFormData = await request.json()
+
+  // Validation
+  if (!body.name || body.name.length < 2 || body.name.length > 60) {
+    return NextResponse.json({ data: null, error: 'Name must be between 2-60 characters' }, { status: 400 })
+  }
+  if (!body.description_short || body.description_short.length > 200) {
+    return NextResponse.json({ data: null, error: 'Short description is required (max 200 chars)' }, { status: 400 })
+  }
+  if (body.description_long && body.description_long.length > 2000) {
+    return NextResponse.json({ data: null, error: 'Long description max 2000 characters' }, { status: 400 })
+  }
+  if (!body.category_id) {
+    return NextResponse.json({ data: null, error: 'Category is required' }, { status: 400 })
+  }
+  if (!body.tech || !(TECH_LIST as readonly string[]).includes(body.tech)) {
+    return NextResponse.json({ data: null, error: 'Valid technology selection is required' }, { status: 400 })
+  }
+  if (!body.code || body.code.length < 1 || body.code.length > 50000) {
+    return NextResponse.json({ data: null, error: 'Code is required (max 50,000 chars)' }, { status: 400 })
+  }
+  if (!body.agreedToTerms) {
+    return NextResponse.json({ data: null, error: 'You must agree to the terms' }, { status: 400 })
+  }
+
+  const slug = generateSlug(body.name)
+
+  // Check slug uniqueness
+  const { data: existing } = await supabase
+    .from('components')
+    .select('id')
+    .eq('slug', slug)
+    .maybeSingle()
+
+  const finalSlug = existing ? `${slug}-${Date.now()}` : slug
+
+  // Sanitize code and build preview
+  const sanitizedCode = sanitizeForStorage(body.code)
+  const previewHtml = buildPreviewHtml(sanitizedCode, body.tech)
+
+  const adminClient = createSupabaseAdminClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = adminClient.from('components') as any
+
+  const { error: insertError } = await db
+    .insert({
+      name: body.name,
+      slug: finalSlug,
+      description_short: body.description_short,
+      description_long: body.description_long || null,
+      category_id: body.category_id,
+      tech: body.tech,
+      code_html: body.tech === 'html_css' ? sanitizedCode : null,
+      code_tailwind: body.tech === 'tailwind' ? sanitizedCode : null,
+      code_react: body.tech === 'react_jsx' ? sanitizedCode : null,
+      code_vue: body.tech === 'vue' ? sanitizedCode : null,
+      preview_html: previewHtml,
+      creator_id: user.id,
+      status: 'pending_review',
+    })
+    .select('slug')
+    .single()
+
+  if (insertError) {
+    return NextResponse.json({ data: null, error: insertError.message }, { status: 500 })
+  }
+
+  // Insert tags
+  if (body.tags && body.tags.length > 0) {
+    const tagRows = body.tags.map((tag) => ({
+      component_slug: finalSlug,
+      tag: tag.trim().toLowerCase().replace(/[^a-z0-9_-]/g, ''),
+    })).filter((t) => t.tag.length > 0)
+
+    if (tagRows.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (adminClient.from('component_tags') as any).insert(tagRows)
+    }
+  }
+
+  return NextResponse.json({ data: { slug: finalSlug }, error: null }, { status: 201 })
 }
