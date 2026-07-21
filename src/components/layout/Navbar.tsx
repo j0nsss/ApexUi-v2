@@ -1,11 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { Menu, X, Search, ChevronDown } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import type { User } from '@supabase/supabase-js'
 import { useSearchStore } from '@/store/searchStore'
+import { useAuthStore } from '@/store/authStore'
 
 const CATEGORY_LINKS = [
   { label: 'Buttons', href: '/?category=buttons' },
@@ -18,16 +17,7 @@ const CATEGORY_LINKS = [
 
 export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [user, setUser] = useState<User | null>(null)
-
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data }) => setUser(data.user ?? null))
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-    })
-    return () => subscription.unsubscribe()
-  }, [])
+  const { user, openAuthModal } = useAuthStore()
 
   return (
     <header
@@ -89,6 +79,7 @@ export function Navbar() {
           ) : (
             <button
               type="button"
+              onClick={() => openAuthModal()}
               className="hidden rounded-md px-3 py-1.5 text-small font-medium text-text-secondary transition-colors hover:text-text-primary sm:inline-block"
             >
               Sign In
@@ -142,6 +133,7 @@ export function Navbar() {
               {!user && (
                 <button
                   type="button"
+                  onClick={() => { openAuthModal(); setMobileOpen(false) }}
                   className="rounded-md px-3 py-2 text-left text-body text-text-secondary transition-colors hover:bg-bg-elevated hover:text-text-primary"
                 >
                   Sign In

@@ -23,7 +23,19 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
+  const pathname = request.nextUrl.pathname
+
+  // Protect dashboard, submit, and admin routes
+  const protectedPaths = ['/dashboard', '/submit', '/admin']
+  const isProtected = protectedPaths.some((p) => pathname.startsWith(p))
+
+  if (isProtected && !user) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/'
+    url.searchParams.set('auth', 'required')
+    return NextResponse.redirect(url)
+  }
 
   return supabaseResponse
 }
