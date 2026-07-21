@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { checkSearchRateLimit } from '@/lib/rate-limit-helpers'
 import type { ApiResponse } from '@/types/api.types'
 
 export async function GET(request: NextRequest) {
+  const rateLimitResponse = await checkSearchRateLimit(request)
+  if (rateLimitResponse) return rateLimitResponse
+
   const { searchParams } = new URL(request.url)
   const q = searchParams.get('q') ?? ''
   const category = searchParams.get('category')
-
-  // TODO: rate limit — max 30 search requests per IP per 60 seconds (Phase 9)
 
   if (!q.trim()) {
     return NextResponse.json<ApiResponse<never[]>>({ data: [], error: null })

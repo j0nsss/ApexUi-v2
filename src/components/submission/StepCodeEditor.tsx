@@ -54,7 +54,7 @@ export function StepCodeEditor({ code, tech, onCodeChange, onBack, onNext }: Ste
       setPreviewHtml(built)
     }, 500)
     return () => clearTimeout(timer)
-  }, [code, tech, buildHtmlCssPreview, buildTailwindPreview, buildReactPreview])
+  }, [code, tech])
 
   // Init CodeMirror
   useEffect(() => {
@@ -85,7 +85,7 @@ export function StepCodeEditor({ code, tech, onCodeChange, onBack, onNext }: Ste
     return () => {
       viewRef.current?.destroy()
     }
-  }, [tech])
+  }, [tech, code, onCodeChange])
 
   const codeLen = code.length
 

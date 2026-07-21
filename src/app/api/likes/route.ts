@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { checkEngagementRateLimit } from '@/lib/rate-limit-helpers'
 
 export async function POST(request: NextRequest) {
+  const rateLimitResponse = await checkEngagementRateLimit(request)
+  if (rateLimitResponse) return rateLimitResponse
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
@@ -28,6 +31,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const rateLimitResponse = await checkEngagementRateLimit(request)
+  if (rateLimitResponse) return rateLimitResponse
+
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {

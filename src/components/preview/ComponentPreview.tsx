@@ -1,7 +1,10 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useMemo } from 'react'
+import { sanitizeForPreview } from '@/lib/sanitize'
 import { PreviewErrorBoundary } from './PreviewErrorBoundary'
+
+const CSP = "default-src 'self'; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://unpkg.com https://cdnjs.cloudflare.com; img-src 'self' data:;"
 
 interface ComponentPreviewProps {
   previewHtml: string
@@ -13,6 +16,9 @@ interface ComponentPreviewProps {
 export function ComponentPreview({ previewHtml, title, minHeight = 200, maxWidth = '100%' }: ComponentPreviewProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [error, setError] = useState(false)
+
+  // Client-side sanitize (defense in depth)
+  const safeHtml = useMemo(() => sanitizeForPreview(previewHtml), [previewHtml])
 
   const handleError = () => setError(true)
 
@@ -34,10 +40,11 @@ export function ComponentPreview({ previewHtml, title, minHeight = 200, maxWidth
       >
         <iframe
           ref={iframeRef}
-          srcDoc={previewHtml}
+          srcDoc={safeHtml}
           title={`Live preview of ${title}`}
           sandbox="allow-scripts"
           loading="lazy"
+          {...{ csp: CSP }}
           onError={handleError}
           className="w-full"
           style={{

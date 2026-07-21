@@ -4,6 +4,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { generateSlug } from '@/lib/slug'
 import { sanitizeForStorage } from '@/lib/sanitize'
 import { buildHtmlCssPreview, buildTailwindPreview, buildReactPreview } from '@/lib/preview-builder'
+import { checkSubmissionRateLimit } from '@/lib/rate-limit-helpers'
 import type { ComponentWithMeta } from '@/types/component.types'
 import type { SubmissionFormData } from '@/types/api.types'
 
@@ -104,6 +105,9 @@ function buildPreviewHtml(code: string, tech: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  const rateLimitResponse = await checkSubmissionRateLimit(request)
+  if (rateLimitResponse) return rateLimitResponse
+
   const supabase = await createServerSupabaseClient()
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -134,6 +138,25 @@ export async function POST(request: NextRequest) {
   }
   if (!body.agreedToTerms) {
     return NextResponse.json({ data: null, error: 'You must agree to the terms' }, { status: 400 })
+  }
+  if (body.tags && body.tags.length > 5) {
+    return NextResponse.json({ data: null, error: 'Maximum 5 tags allowed' }, { status: 400 })
+  }
+  for (const tag of body.tags ?? []) {
+    if (tag.length > 20) {
+      return NextResponse.json({ data: null, error: 'Each tag must be 20 characters or less' }, { status: 400 })
+    }
+  }
+
+  // Verify category exists
+  const { data: cat } = await supabase
+    .from('categories')
+    .select('id')
+    .eq('id', body.category_id)
+    .single()
+
+  if (!cat) {
+    return NextResponse.json({ data: null, error: 'Category not found' }, { status: 422 })
   }
 
   const slug = generateSlug(body.name)
