@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { Heart, Copy, Check, Bookmark } from 'lucide-react'
 import type { ComponentWithMeta } from '@/types/component.types'
+import { ComponentPreview } from '@/components/preview/ComponentPreview'
 
 interface ComponentCardProps {
   component: ComponentWithMeta
@@ -14,6 +15,7 @@ export function ComponentCard({ component }: ComponentCardProps) {
   const [liked, setLiked] = useState(component.is_liked ?? false)
   const [likeCount, setLikeCount] = useState(component.like_count)
   const [bookmarked, setBookmarked] = useState(component.is_bookmarked ?? false)
+  const cardRef = useRef<HTMLDivElement>(null)
 
   const codeToCopy = component.code_html ?? component.code_tailwind ?? component.code_react ?? ''
 
@@ -35,16 +37,13 @@ export function ComponentCard({ component }: ComponentCardProps) {
   }
 
   return (
-    <article aria-label={`Component: ${component.name}`} className="component-card group overflow-hidden">
+    <article ref={cardRef} aria-label={`Component: ${component.name}`} className="component-card group overflow-hidden">
       {/* Preview area */}
       <div className="relative flex h-40 items-center justify-center overflow-hidden bg-[#0D0D10] sm:h-48">
-        <iframe
-          srcDoc={component.preview_html}
-          title={`Live preview of ${component.name}`}
-          sandbox="allow-scripts"
-          loading="lazy"
-          className="h-full w-full"
-          style={{ border: 'none', background: '#0D0D10' }}
+        <ComponentPreview
+          previewHtml={component.preview_html}
+          title={component.name}
+          minHeight={160}
         />
 
         {/* Category badge (bottom-left) */}
