@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Menu, X, Search, ChevronDown } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { useEffect } from 'react'
 import type { User } from '@supabase/supabase-js'
+import { useSearchStore } from '@/store/searchStore'
 
 const CATEGORY_LINKS = [
   { label: 'Buttons', href: '/?category=buttons' },
@@ -66,6 +66,7 @@ export function Navbar() {
           {/* Ctrl+K search trigger */}
           <button
             type="button"
+            onClick={() => useSearchStore.getState().openPalette()}
             className="hidden items-center gap-2 rounded-md border border-border-default px-3 py-1.5 text-small text-text-muted transition-colors hover:text-text-secondary sm:flex"
             aria-label="Open search"
           >
