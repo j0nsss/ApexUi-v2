@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { PreviewWidthControlsWrapper } from './PreviewWidthControlsWrapper'
 import { CodePanel } from '@/components/code-panel/CodePanel'
+import { EngagementButtons } from './EngagementButtons'
 
 interface PageProps {
   params: { slug: string }
@@ -141,6 +142,9 @@ export default async function ComponentDetailPage({ params }: PageProps) {
             codeReact={comp.code_react}
             codeVue={comp.code_vue}
           />
+          <div className="mt-4 flex items-center gap-4">
+            <EngagementButtons componentId={comp.id} />
+          </div>
         </div>
       </div>
 

@@ -48,13 +48,38 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data: null, error: error.message }, { status: 500 })
   }
 
+  // Fetch engagement state for authenticated users
+  const { data: { user } } = await supabase.auth.getUser()
+  const compIds = (data ?? []).map((c: Record<string, unknown>) => c.id as string)
+  let likedIds = new Set<string>()
+  let bookmarkedIds = new Set<string>()
+
+  if (user && compIds.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: likes } = await (supabase.from('likes') as any)
+      .select('component_id')
+      .eq('user_id', user.id)
+      .in('component_id', compIds)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: bookmarks } = await (supabase.from('bookmarks') as any)
+      .select('component_id')
+      .eq('user_id', user.id)
+      .in('component_id', compIds)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (likes) likedIds = new Set((likes as any[]).map((l: any) => l.component_id))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (bookmarks) bookmarkedIds = new Set((bookmarks as any[]).map((b: any) => b.component_id))
+  }
+
   const components: ComponentWithMeta[] = (data ?? []).map((item: unknown) => {
     const row = item as Record<string, unknown>
     return {
       ...row,
       tags: [],
-      is_liked: false,
-      is_bookmarked: false,
+      is_liked: likedIds.has(row.id as string),
+      is_bookmarked: bookmarkedIds.has(row.id as string),
     } as unknown as ComponentWithMeta
   })
 

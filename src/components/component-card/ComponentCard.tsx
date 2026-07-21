@@ -2,9 +2,11 @@
 
 import { useState, useRef } from 'react'
 import Link from 'next/link'
-import { Heart, Copy, Check, Bookmark } from 'lucide-react'
+import { Copy, Check } from 'lucide-react'
 import type { ComponentWithMeta } from '@/types/component.types'
 import { ComponentPreview } from '@/components/preview/ComponentPreview'
+import { LikeButton } from '@/components/engagement/LikeButton'
+import { BookmarkButton } from '@/components/engagement/BookmarkButton'
 
 interface ComponentCardProps {
   component: ComponentWithMeta
@@ -12,9 +14,6 @@ interface ComponentCardProps {
 
 export function ComponentCard({ component }: ComponentCardProps) {
   const [copied, setCopied] = useState(false)
-  const [liked, setLiked] = useState(component.is_liked ?? false)
-  const [likeCount, setLikeCount] = useState(component.like_count)
-  const [bookmarked, setBookmarked] = useState(component.is_bookmarked ?? false)
   const cardRef = useRef<HTMLDivElement>(null)
 
   const codeToCopy = component.code_html ?? component.code_tailwind ?? component.code_react ?? ''
@@ -53,8 +52,11 @@ export function ComponentCard({ component }: ComponentCardProps) {
 
         {/* Like count (bottom-right) */}
         <div className="pointer-events-none absolute bottom-2 right-2 flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 text-xs text-text-secondary">
-          <Heart className="h-3 w-3" />
-          <span>{likeCount}</span>
+          <LikeButton
+            componentId={component.id}
+            initialLiked={component.is_liked ?? false}
+            initialCount={component.like_count}
+          />
         </div>
       </div>
 
@@ -80,35 +82,16 @@ export function ComponentCard({ component }: ComponentCardProps) {
 
         {/* Hover actions */}
         <div className="hover-actions mt-3 flex items-center justify-between border-t border-border-default pt-3">
-          <button
-            type="button"
-            onClick={() => {
-              setLiked(!liked)
-              setLikeCount((c) => (liked ? c - 1 : c + 1))
-            }}
-            className={`flex items-center gap-1 text-small transition-colors ${
-              liked ? 'text-accent-red' : 'text-text-muted hover:text-text-secondary'
-            }`}
-            aria-label={liked ? 'Unlike this component' : 'Like this component'}
-            aria-pressed={liked}
-          >
-            <Heart className={`h-3.5 w-3.5 ${liked ? 'fill-accent-red' : ''}`} />
-            <span>{likeCount}</span>
-          </button>
+          <LikeButton
+            componentId={component.id}
+            initialLiked={component.is_liked ?? false}
+            initialCount={component.like_count}
+          />
 
-          <button
-            type="button"
-            onClick={() => {
-              setBookmarked(!bookmarked)
-            }}
-            className={`flex items-center gap-1 text-small transition-colors ${
-              bookmarked ? 'text-accent-violet' : 'text-text-muted hover:text-text-secondary'
-            }`}
-            aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark this component'}
-            aria-pressed={bookmarked}
-          >
-            <Bookmark className={`h-3.5 w-3.5 ${bookmarked ? 'fill-accent-violet' : ''}`} />
-          </button>
+          <BookmarkButton
+            componentId={component.id}
+            initialBookmarked={component.is_bookmarked ?? false}
+          />
 
           <button
             type="button"
