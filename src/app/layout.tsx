@@ -3,6 +3,8 @@ import { Inter } from 'next/font/google'
 import { JetBrains_Mono } from 'next/font/google'
 import { Toaster } from 'react-hot-toast'
 import { Providers } from '@/components/layout/Providers'
+import { Navbar } from '@/components/layout/Navbar'
+import { Footer } from '@/components/layout/Footer'
 import './globals.css'
 
 const inter = Inter({
@@ -55,7 +57,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to main content
         </a>
         <Providers>
+          <Navbar />
           {children}
+          <Footer />
         </Providers>
         <Toaster
           position="bottom-right"
