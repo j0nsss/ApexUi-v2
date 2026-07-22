@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { EditorView, basicSetup } from 'codemirror'
-import { EditorState } from '@codemirror/state'
-import { html } from '@codemirror/lang-html'
-import { javascript } from '@codemirror/lang-javascript'
-import { oneDark } from '@codemirror/theme-one-dark'
+import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { buildHtmlCssPreview, buildTailwindPreview, buildReactPreview } from '@/lib/preview-builder'
+
+const CodeMirrorEditor = dynamic(
+  () => import('./CodeMirrorEditor').then((m) => m.CodeMirrorEditor),
+  { ssr: false, loading: () => <div className="code-panel flex min-h-[400px] items-center justify-center text-text-muted">Loading editor...</div> },
+)
 
 interface StepCodeEditorProps {
   code: string
@@ -16,20 +17,10 @@ interface StepCodeEditorProps {
   onNext: () => void
 }
 
-const LANG_MAP: Record<string, ReturnType<typeof html>> = {
-  html_css: html(),
-  tailwind: html(),
-  react_jsx: javascript(),
-  vue: html(),
-}
-
 export function StepCodeEditor({ code, tech, onCodeChange, onBack, onNext }: StepCodeEditorProps) {
-  const editorRef = useRef<HTMLDivElement>(null)
-  const viewRef = useRef<EditorView | null>(null)
   const [previewHtml, setPreviewHtml] = useState('')
   const [bgLight, setBgLight] = useState(false)
 
-  // Build preview on code change (debounced)
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!code.trim()) {
@@ -56,37 +47,6 @@ export function StepCodeEditor({ code, tech, onCodeChange, onBack, onNext }: Ste
     return () => clearTimeout(timer)
   }, [code, tech])
 
-  // Init CodeMirror
-  useEffect(() => {
-    if (!editorRef.current) return
-    if (viewRef.current) viewRef.current.destroy()
-
-    const startState = EditorState.create({
-      doc: code,
-      extensions: [
-        basicSetup,
-        oneDark,
-        LANG_MAP[tech] ?? html(),
-        EditorView.lineWrapping,
-      ],
-    })
-
-    viewRef.current = new EditorView({
-      state: startState,
-      parent: editorRef.current,
-      dispatch: (tr) => {
-        viewRef.current?.update([tr])
-        if (tr.docChanged) {
-          onCodeChange(viewRef.current!.state.doc.toString())
-        }
-      },
-    })
-
-    return () => {
-      viewRef.current?.destroy()
-    }
-  }, [tech, code, onCodeChange])
-
   const codeLen = code.length
 
   return (
@@ -99,11 +59,7 @@ export function StepCodeEditor({ code, tech, onCodeChange, onBack, onNext }: Ste
             {codeLen} / 10,000 chars {codeLen > 10000 ? '(soft limit)' : ''}
           </span>
         </div>
-        <div
-          ref={editorRef}
-          className="code-panel"
-          style={{ minHeight: '400px', maxHeight: '600px' }}
-        />
+        <CodeMirrorEditor code={code} tech={tech} onChange={onCodeChange} />
         {codeLen > 50000 && (
           <p className="mt-1 text-xs text-accent-red">Code exceeds 50,000 char limit.</p>
         )}
