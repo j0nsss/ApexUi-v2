@@ -18,15 +18,6 @@ export function useAuth() {
     if (error) console.error('GitHub sign-in error:', error.message)
   }, [])
 
-  const signInWithGoogle = useCallback(async () => {
-    const supabase = createClient()
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${ORIGIN}/auth/callback` },
-    })
-    if (error) console.error('Google sign-in error:', error.message)
-  }, [])
-
   const signOut = useCallback(async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
@@ -37,7 +28,6 @@ export function useAuth() {
     session,
     isLoading,
     signInWithGitHub,
-    signInWithGoogle,
     signOut,
     openAuthModal,
   }
